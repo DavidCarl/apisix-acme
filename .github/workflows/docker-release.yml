@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - '*'   # Build on any tag, e.g. v1.0.0
+      - '*'   # build on any tag
 
 jobs:
   build-and-push:
@@ -11,7 +11,7 @@ jobs:
 
     permissions:
       contents: read
-      packages: write   # required to push images to GHCR
+      packages: write   
       id-token: write
 
     steps:
@@ -25,23 +25,26 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}   # Built-in token!
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push Docker image
         run: |
           TAG="${{ github.ref_name }}"
+          
+          # Base name (uppercase allowed in GH account, but GHCR requires lowercase)
           IMAGE="ghcr.io/${{ github.repository_owner }}/apisix-acme"
 
-          echo "Building ${IMAGE}:${TAG}"
+          # Force lowercase
+          IMAGE="${IMAGE,,}"
 
-          # Build the image
+          echo "Building image: ${IMAGE}:${TAG}"
+
           docker build -t "${IMAGE}:${TAG}" .
 
-          # Push versioned tag
           docker push "${IMAGE}:${TAG}"
 
-          # If tag starts with v*, also publish 'latest'
-          if [[ "${TAG}" =~ ^v[0-9].* ]]; then
+          # Push latest if tag looks like a version
+          if [[ "${TAG}" =~ ^v?[0-9].* ]]; then
             echo "Pushing ${IMAGE}:latest"
             docker tag "${IMAGE}:${TAG}" "${IMAGE}:latest"
             docker push "${IMAGE}:latest"
